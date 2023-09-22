@@ -1,11 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+import hashlib
+import os
+from time import sleep
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory
+from flask_session import Session
 from colorama import Fore
 import pymongo
 import redis
-import hashlib
-import os
 import dotenv
-from time import sleep
+
 
 # Global Variables
 MONGO_CLIENT = None
@@ -13,6 +15,8 @@ DB = None
 REDIS_CLIENT = None
 
 # Helper functions
+
+
 def file_hash(file):
     '''
     Returns the hash of a file using SHA256
@@ -57,7 +61,8 @@ def connect_mongodb(number_of_tries=0):
         if number_of_tries < 3:
             sleep(5*number_of_tries)
             connect_mongodb(number_of_tries + 1)
-        raise Exception(Fore.RED + "Failed to connect to MongoDB Atlas") from error
+        raise Exception(
+            Fore.RED + "Failed to connect to MongoDB Atlas") from error
 
 
 def connect_redis(number_of_tries=0):
@@ -71,8 +76,8 @@ def connect_redis(number_of_tries=0):
     Returns: None
     '''
     global REDIS_CLIENT
-    REDIS_CLIENT = redis.Redis.from_url(
-        f"rediss://{os.environ.get('REDIS_USERNAME')}:{os.environ.get('REDIS_PASSWORD')}@shi-redis-projectrexa.aivencloud.com:25156",  decode_responses=True)
+    REDIS_CLIENT = redis.from_url(
+        f"rediss://{os.environ.get('REDIS_USERNAME')}:{os.environ.get('REDIS_PASSWORD')}@shi-redis-projectrexa.aivencloud.com:25156")
 
     try:
         REDIS_CLIENT.ping()
@@ -86,13 +91,37 @@ def connect_redis(number_of_tries=0):
 
 
 # Flask App
-app = Flask(__name__)
+app = Flask(__name__, static_url_path="/resources/public", static_folder="resources/public", template_folder="frontend/public")
 dotenv.load_dotenv()
-
-# Database Connections
 connect_mongodb()
 connect_redis()
 
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_REDIS"] = REDIS_CLIENT
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_NAME"] = "X-Identity"
+app.config["SESSION_COOKIE_PATH"] = "/"
+
+Session(app)
 
 
+@app.route("/", methods=["GET"])
+def index():
+    '''
+    Renders the index page or redirects to the dashboard if the user is logged in
 
+    Returns: HTML -- The index page or the dashboard page
+    '''
+    if session.get("logged_in"):
+        return redirect(url_for("dashboard"))
+    return render_template("index.html")
+
+@app.route("/login", methods=["GET", "POST"])
+
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=7777)

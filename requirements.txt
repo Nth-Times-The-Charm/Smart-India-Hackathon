@@ -1,5 +1,7 @@
 flask
+Flask-Session
 colorama
 pymongo
 redis
 python-dotenv
+
