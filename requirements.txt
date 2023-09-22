@@ -1,0 +1,5 @@
+flask
+colorama
+pymongo
+redis
+python-dotenv
