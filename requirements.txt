@@ -4,4 +4,6 @@ colorama
 pymongo
 redis
 python-dotenv
+sib-api-v3-sdk
+
 
