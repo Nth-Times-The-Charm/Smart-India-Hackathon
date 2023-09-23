@@ -7,3 +7,7 @@ python-dotenv
 sib-api-v3-sdk
 
 
+# extentions
+1.live server 
+2.python
+
