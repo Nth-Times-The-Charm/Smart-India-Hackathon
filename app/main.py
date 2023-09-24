@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 import os
-from time import sleep, time
+import time
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory
 from flask_session import Session
 from colorama import Fore
@@ -17,27 +17,13 @@ MONGO_CLIENT = None
 DB = None
 REDIS_CLIENT = None
 
-# Helper functions
 
+# Flask App
 
-def file_hash(file):
-    '''
-    Returns the hash of a file using SHA256
+app = Flask(__name__, static_url_path="/resources/public",
+            static_folder="resources/public", template_folder="frontend")
 
-    Arguments: file {File} -- The file to be hashed
-
-    Returns: String -- The hash of the file
-    '''
-    try:
-        file.seek(0)
-        while True:
-            chunk = file.read(hashlib.sha256().block_size)
-            if not chunk:
-                break
-            hashlib.sha256().update(chunk)
-        return hashlib.sha256().hexdigest()
-    except Exception as error:
-        raise Exception(Fore.RED + f"Failed to hash file: {error}")
+# Database Connections
 
 
 def connect_mongodb(number_of_tries=0):
@@ -62,7 +48,7 @@ def connect_mongodb(number_of_tries=0):
 
     except Exception as error:
         if number_of_tries < 3:
-            sleep(5*number_of_tries)
+            time.sleep(5*number_of_tries)
             connect_mongodb(number_of_tries + 1)
         raise Exception(
             Fore.RED + "Failed to connect to MongoDB Atlas") from error
@@ -88,9 +74,54 @@ def connect_redis(number_of_tries=0):
 
     except Exception as error:
         if number_of_tries < 3:
-            sleep(5*number_of_tries)
+            time.sleep(5*number_of_tries)
             connect_redis(number_of_tries + 1)
         raise Exception(Fore.RED + "Failed to connect to Redis") from error
+
+
+connect_mongodb()
+connect_redis()
+
+# Flask Config
+
+
+dotenv.load_dotenv()
+configuration = sib_api_v3_sdk.Configuration()
+configuration.api_key['api-key'] = os.environ.get("SENDINBLUE_API_KEY")
+
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_REDIS"] = REDIS_CLIENT
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_NAME"] = "X-Identity"
+app.config["SESSION_COOKIE_PATH"] = "/"
+
+Session(app)
+
+# Helper Functions
+
+
+def file_hash(file):
+    '''
+    Returns the hash of a file using SHA256
+
+    Arguments: file {File} -- The file to be hashed
+
+    Returns: String -- The hash of the file
+    '''
+    try:
+        file.seek(0)
+        while True:
+            chunk = file.read(hashlib.sha256().block_size)
+            if not chunk:
+                break
+            hashlib.sha256().update(chunk)
+        return hashlib.sha256().hexdigest()
+    except Exception as error:
+        raise Exception(Fore.RED + f"Failed to hash file: {error}")
 
 
 def send_email(email, name, type, verification_code=None):
@@ -112,13 +143,13 @@ def send_email(email, name, type, verification_code=None):
     match type:
         case "organization_verification":
             subject = "Organization Verification - CertSecure"
-            sender = {"name": "ProjectRexa",
+            sender = {"name": "CertSecure",
                       "email": "noreply@projectrexa.dedyn.io"}
             to = [{"email": email, "name": name}]
-            reply_to = {"email": "contact@projectrexa.dedyn.io",
-                        "name": "ProjectRexa"}
+            reply_to = {"email": "certsecure@projectrexa.dedyn.io",
+                        "name": "CertSecure"}
             html = render_template(
-                'email/forgot_password.html', name=name, link="https://certsecure.project.projectrexa.dedyn.io/organization/verify-domain?verification_code="+verification_code)
+                'email/sign-up.html', name=name, link="https://certsecure.project.projectrexa.dedyn.io/organization/verify-domain?verification-code="+verification_code, year=time.strftime("%Y"))
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
                 to=to, html_content=html, reply_to=reply_to, sender=sender, subject=subject)
 
@@ -132,26 +163,7 @@ def send_email(email, name, type, verification_code=None):
         return False
 
 
-# Flask App
-app = Flask(__name__, static_url_path="/resources/public",
-            static_folder="resources/public", template_folder="frontend")
-dotenv.load_dotenv()
-connect_mongodb()
-connect_redis()
-configuration = sib_api_v3_sdk.Configuration()
-configuration.api_key['api-key'] = os.environ.get("SENDINBLUE_API_KEY")
-
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
-app.config["SESSION_PERMANENT"] = True
-app.config["SESSION_TYPE"] = "redis"
-app.config["SESSION_REDIS"] = REDIS_CLIENT
-app.config["SESSION_COOKIE_SECURE"] = True
-app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_NAME"] = "X-Identity"
-app.config["SESSION_COOKIE_PATH"] = "/"
-
-Session(app)
+# Flask Routes
 
 
 @app.route("/", methods=["GET"])
@@ -269,6 +281,15 @@ def signup():
         return redirect(url_for("login"))
 
     return render_template("organization_signup.html")
+
+
+@app.route("/test", methods=["GET"])
+def test():
+    if (send_email(email="projectrexaofficial@gmail.com", name="ProjectRexa",
+                   type="organization_verification", verification_code="test")):
+        return "Email sent successfully"
+    else:
+        return "Failed to send email"
 
 
 if __name__ == "__main__":
