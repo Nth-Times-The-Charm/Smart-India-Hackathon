@@ -10,9 +10,11 @@ import redis
 import dotenv
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
+import dns.resolver
 
 
 # Global Variables
+dotenv.load_dotenv()
 MONGO_CLIENT = None
 DB = None
 REDIS_CLIENT = None
@@ -85,7 +87,6 @@ connect_redis()
 # Flask Config
 
 
-dotenv.load_dotenv()
 configuration = sib_api_v3_sdk.Configuration()
 configuration.api_key['api-key'] = os.environ.get("SENDINBLUE_API_KEY")
 
@@ -235,8 +236,8 @@ def logout():
             return redirect(url_for("index"))
 
 
-@app.route("/oragnization/signup", methods=["GET", "POST"])
-def signup():
+@app.route("/organization/signup", methods=["GET", "POST"])
+def organization_signup():
     '''
     Renders the signup page if the user is not logged in or redirects to the dashboard page
 
@@ -258,14 +259,19 @@ def signup():
         organization_contact_email = str(request.form.get(
             "organization_contact_email").lower()).replace(" ", "")
 
+        if not organization_name or not organization_domain or not organization_contact_number or not organization_contact_email:
+            flash("Please fill all the fields", "error")
+            return render_template("organization_signup.html")
         if DB["organizations"].find_one({"organization_domain": organization_domain}):
             flash("Organization already exists", "error")
             return render_template("organization_signup.html")
 
-        verification_code = secrets.token_hex(32)
+        verification_txt_record = "certsecure-verification-" + \
+            secrets.token_hex(32)
+        organization_id = secrets.token_hex(8)
 
-        send_email(email="admin@"+organization_domain, name=organization_name,
-                   type="organization_verification", verification_code=verification_code)
+        while DB["organizations"].find_one({"organization_id": organization_id}) != None:
+            organization_id = secrets.token_hex(8)
 
         DB["organizations"].insert_one({
             "organization_name": organization_name,
@@ -273,24 +279,57 @@ def signup():
             "organization_contact_number": organization_contact_number,
             "organization_contact_email": organization_contact_email,
             "organization_verified": False,
-            "verification_code": verification_code,
+            "verification_code": verification_txt_record,
             "organization_joining_timestamp": time.time(),
         })
-
-        flash("Organization created successfully", "success")
-        return redirect(url_for("login"))
+        session["organization_id"] = organization_id
+        return redirect(url_for("verify_domain"))
 
     return render_template("organization_signup.html")
 
 
-@app.route("/test", methods=["GET"])
+@app.route("/organization/verify-domain", methods=["GET", "POST"])
+def verify_domain():
+    if request.method == "GET":
+        if not session.get("logged_in") and session.get("organization_id"):
+            if not DB["organizations"].find_one({"organization_id": session.get("organization_id")}):
+                return redirect(url_for("organization_signup"))
+            if DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_verified"]:
+                return redirect(url_for("dashboard"))
+            verification_text_record = DB["organizations"].find_one(
+                {"organization_id": session.get("organization_id")})["verification_code"]
+            return render_template("verify_domain.html", verification_text_record=verification_text_record)
+        return redirect(url_for("organization_signup"))
+    elif request.method == "POST":
+        if not session.get("logged_in") and session.get("organization_id"):
+            if not DB["organizations"].find_one({"organization_id": session.get("organization_id")}):
+                return redirect(url_for("organization_signup"))
+            if DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_verified"]:
+                return redirect(url_for("dashboard"))
+            verification_text_record = DB["organizations"].find_one(
+                {"organization_id": session.get("organization_id")})["verification_code"]
+            if dns.resolver.resolve("certsecure._key"+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text() == verification_text_record:
+                DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
+                    "$set": {"organization_verified": True}})
+                return redirect(url_for("dashboard"))
+            else:
+                flash("Txt record not found", "error")
+                return render_template("verify_domain.html", verification_text_record=verification_text_record)
+        return redirect(url_for("organization_signup"))
+
+
+@app.route("/test")
 def test():
-    if (send_email(email="projectrexaofficial@gmail.com", name="ProjectRexa",
-                   type="organization_verification", verification_code="test")):
-        return "Email sent successfully"
+    domain = request.args.get("domain")
+    verification_code = request.args.get("verification_code")
+    if domain:
+        try:
+            return dns.resolver.resolve("txt-certsecure-domain-verification."+domain, "TXT")[0].to_text()
+        except:
+            return "Record not found"
     else:
-        return "Failed to send email"
+        return "No TXT record found"
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7777)
+    app.run(host="0.0.0.0", port=7777, debug=True)
