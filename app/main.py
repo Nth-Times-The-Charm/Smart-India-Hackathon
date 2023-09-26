@@ -11,6 +11,7 @@ import dotenv
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 import dns.resolver
+import requests
 
 
 # Global Variables
@@ -164,6 +165,24 @@ def send_email(email, name, type, verification_code=None):
         return False
 
 
+def verify_recaptcha(response):
+    '''
+    Verifies the reCAPTCHA response
+
+    Arguments: response {String} -- The reCAPTCHA response
+
+    Raises: Exception -- If the function fails to verify the reCAPTCHA response
+
+    Returns: Boolean -- True if the reCAPTCHA response is valid else False
+    '''
+    try:
+        api_response = requests.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", data={"secret":"0x4AAAAAAAKrUKS-bseXfvK9BPnnudKIMoY", "response":response}).json()
+        if api_response.get("success"):
+            return True
+        else:
+            return False
+    except ApiException as e:
+        return False
 # Flask Routes
 
 
@@ -247,17 +266,21 @@ def organization_signup():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        if not verify_recaptcha(request.form.get("g-recaptcha-response")):
+        if not verify_recaptcha(request.form.get("cf-turnstile-response")):
             flash("Invalid reCAPTCHA", "error")
             return render_template("organization_signup.html")
 
         organization_name = str(request.form.get("organization_name").title())
+        organization_type = str(request.form.get(
+            "organization_type").lower()).replace(" ", "")
         organization_domain = str(request.form.get(
             "organization_domain").lower()).replace(" ", "")
         organization_contact_number = str(request.form.get(
             "organization_contact_number").lower()).replace(" ", "")
         organization_contact_email = str(request.form.get(
             "organization_contact_email").lower()).replace(" ", "")
+        organization_password = str(request.form.get(
+            "organization_password").lower()).replace(" ", "")
 
         if not organization_name or not organization_domain or not organization_contact_number or not organization_contact_email:
             flash("Please fill all the fields", "error")
@@ -272,6 +295,7 @@ def organization_signup():
 
         while DB["organizations"].find_one({"organization_id": organization_id}) != None:
             organization_id = secrets.token_hex(8)
+        return "Done"
 
         DB["organizations"].insert_one({
             "organization_name": organization_name,

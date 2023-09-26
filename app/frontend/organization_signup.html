@@ -1,11 +1,72 @@
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Organization Signup</title>
+    <link rel="stylesheet" href="/resources/public/css/organization_signup.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  </head>
+  <body>
+    <main>
+    <form action="/organization/signup" method="post">
+      <label for="organization_name">Organization Name</label>
+      <input
+        type="text"
+        name="organization_name"
+        id="organization_name"
+        required
+      />
+      <br />
+      <label for="organization_type">Organization Type</label>
+      <input
+        type="text"
+        name="organization_type"
+        id="organization_type"
+        required
+      />
+      <br />
+      <label for="organization_domain">Organization Domain</label>
+      <input
+        type="text"
+        name="organization_domain"
+        id="organization_domain"
+        required
+      />
+      <br />
+      <label for="organization_contact_number"
+        >Organization Contact Number</label
+      >
+      <input
+        type="text"
+        name="organization_contact_number"
+        id="organization_contact_number"
+        required
+      />
+      <br />
+      <label for="organization_contact_email">Organization Contact Email</label>
+      <input
+        type="text"
+        name="organization_contact_email"
+        id="organization_contact_email"
+        required
+      />
+      <br />
+      <label for="organization_password">Organization Password</label>
+      <input
+        type="password"
+        name="organization_password"
+        id="organization_password"
+        required
+      />
+      <br />
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAAAKrUJ3Czhau9p1D" data-action="organization-signup" data-widget_type="compact"></div>
+      <input type="submit" value="Submit" />
+    </form>
+</main>
+<footer>
+    <p>&copy; 2023 CertSecure, All rights reserved.</p>
+</footer>
+  </body>
 </html>
