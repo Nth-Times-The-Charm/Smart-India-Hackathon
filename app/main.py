@@ -12,6 +12,7 @@ import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 import dns.resolver
 import requests
+import bcrypt
 
 
 # Global Variables
@@ -49,12 +50,12 @@ def connect_mongodb(number_of_tries=0):
         MONGO_CLIENT.server_info()
         print(Fore.GREEN + "Connected to MongoDB Atlas")
 
-    except Exception as error:
+    except Exception as danger:
         if number_of_tries < 3:
             time.sleep(5*number_of_tries)
             connect_mongodb(number_of_tries + 1)
         raise Exception(
-            Fore.RED + "Failed to connect to MongoDB Atlas") from error
+            Fore.RED + "Failed to connect to MongoDB Atlas") from danger
 
 
 def connect_redis(number_of_tries=0):
@@ -75,11 +76,11 @@ def connect_redis(number_of_tries=0):
         REDIS_CLIENT.ping()
         print(Fore.GREEN + "Connected to Redis")
 
-    except Exception as error:
+    except Exception as danger:
         if number_of_tries < 3:
             time.sleep(5*number_of_tries)
             connect_redis(number_of_tries + 1)
-        raise Exception(Fore.RED + "Failed to connect to Redis") from error
+        raise Exception(Fore.RED + "Failed to connect to Redis") from danger
 
 
 connect_mongodb()
@@ -122,8 +123,8 @@ def file_hash(file):
                 break
             hashlib.sha256().update(chunk)
         return hashlib.sha256().hexdigest()
-    except Exception as error:
-        raise Exception(Fore.RED + f"Failed to hash file: {error}")
+    except Exception as danger:
+        raise Exception(Fore.RED + f"Failed to hash file: {danger}")
 
 
 def send_email(email, name, type, verification_code=None):
@@ -176,7 +177,8 @@ def verify_recaptcha(response):
     Returns: Boolean -- True if the reCAPTCHA response is valid else False
     '''
     try:
-        api_response = requests.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", data={"secret":"0x4AAAAAAAKrUKS-bseXfvK9BPnnudKIMoY", "response":response}).json()
+        api_response = requests.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", data={
+                                     "secret": "0x4AAAAAAAKrUKS-bseXfvK9BPnnudKIMoY", "response": response}).json()
         if api_response.get("success"):
             return True
         else:
@@ -185,6 +187,11 @@ def verify_recaptcha(response):
         return False
 # Flask Routes
 
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def check_password(password, hashed_password):
+    return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 @app.route("/", methods=["GET"])
 def index():
@@ -228,7 +235,7 @@ def login():
             session["logged_in"] = True
             return redirect(url_for("dashboard"))
 
-        flash("Invalid username or password", "error")
+        flash("Invalid username or password", "danger")
 
     return render_template("login.html")
 
@@ -251,7 +258,7 @@ def logout():
             session.clear()
             return redirect(url_for("index"))
         else:
-            flash("Unauthorized logout request", "error")
+            flash("Unauthorized logout request", "danger")
             return redirect(url_for("index"))
 
 
@@ -266,27 +273,38 @@ def organization_signup():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        if not verify_recaptcha(request.form.get("cf-turnstile-response")):
-            flash("Invalid reCAPTCHA", "error")
+        turnstile_response = request.form.get("cf-turnstile-response")
+
+        if not turnstile_response:
+            flash("Invalid CAPTCHA response, please try again", "danger")
+            return render_template("organization_signup.html")
+
+        if not verify_recaptcha(turnstile_response):
+            flash("Invalid CAPTCHA response, please try again", "danger")
+            return render_template("organization_signup.html")
+
+        if not request.form.get("organization_name") or not request.form.get("organization_domain") or not request.form.get("organization_contact_email") or not request.form.get("organization_password"):
+            flash("Please fill all the fields", "danger")
             return render_template("organization_signup.html")
 
         organization_name = str(request.form.get("organization_name").title())
-        organization_type = str(request.form.get(
-            "organization_type").lower()).replace(" ", "")
         organization_domain = str(request.form.get(
             "organization_domain").lower()).replace(" ", "")
-        organization_contact_number = str(request.form.get(
-            "organization_contact_number").lower()).replace(" ", "")
         organization_contact_email = str(request.form.get(
             "organization_contact_email").lower()).replace(" ", "")
         organization_password = str(request.form.get(
             "organization_password").lower()).replace(" ", "")
 
-        if not organization_name or not organization_domain or not organization_contact_number or not organization_contact_email:
-            flash("Please fill all the fields", "error")
+        if not "." in organization_domain:
+            flash("Invalid domain, please try again", "danger")
             return render_template("organization_signup.html")
+
+        if not "@" in organization_contact_email or not "." in organization_contact_email:
+            flash("Invalid email address, please try again", "danger")
+            return render_template("organization_signup.html")
+
         if DB["organizations"].find_one({"organization_domain": organization_domain}):
-            flash("Organization already exists", "error")
+            flash("Organization already exists", "danger")
             return render_template("organization_signup.html")
 
         verification_txt_record = "certsecure-verification-" + \
@@ -295,13 +313,12 @@ def organization_signup():
 
         while DB["organizations"].find_one({"organization_id": organization_id}) != None:
             organization_id = secrets.token_hex(8)
-        return "Done"
 
         DB["organizations"].insert_one({
             "organization_name": organization_name,
             "organization_domain": organization_domain,
-            "organization_contact_number": organization_contact_number,
             "organization_contact_email": organization_contact_email,
+            "organization_password": hash_password(organization_password),
             "organization_verified": False,
             "verification_code": verification_txt_record,
             "organization_joining_timestamp": time.time(),
@@ -317,12 +334,17 @@ def verify_domain():
     if request.method == "GET":
         if not session.get("logged_in") and session.get("organization_id"):
             if not DB["organizations"].find_one({"organization_id": session.get("organization_id")}):
+                flash("Organization not found, signup to continue", "danger")
                 return redirect(url_for("organization_signup"))
             if DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_verified"]:
+                flash("Domain already verified", "danger")
                 return redirect(url_for("dashboard"))
             verification_text_record = DB["organizations"].find_one(
                 {"organization_id": session.get("organization_id")})["verification_code"]
-            return render_template("verify_domain.html", verification_text_record=verification_text_record)
+            domain_name = DB["organizations"].find_one(
+                {"organization_id": session.get("organization_id")})["organization_domain"]
+            return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=domain_name)
+        flash("Organization not found, signup to continue", "danger")
         return redirect(url_for("organization_signup"))
     elif request.method == "POST":
         if not session.get("logged_in") and session.get("organization_id"):
@@ -332,12 +354,13 @@ def verify_domain():
                 return redirect(url_for("dashboard"))
             verification_text_record = DB["organizations"].find_one(
                 {"organization_id": session.get("organization_id")})["verification_code"]
-            if dns.resolver.resolve("certsecure._key"+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text() == verification_text_record:
+            if dns.resolver.resolve("txt-certsecure-domain-verification."+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text() == verification_text_record:
                 DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
                     "$set": {"organization_verified": True}})
-                return redirect(url_for("dashboard"))
+                flash("Domain verified successfully", "success")
+                return "Domain verified successfully"
             else:
-                flash("Txt record not found", "error")
+                flash("Txt record not found", "danger")
                 return render_template("verify_domain.html", verification_text_record=verification_text_record)
         return redirect(url_for("organization_signup"))
 

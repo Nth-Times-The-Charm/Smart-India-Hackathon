@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Domain Verification</title>
+    <link rel="icon" href="/resources/public/images/favicon.svg" />
+    <link rel="stylesheet" href="/resources/public/css/basic.css" />
+    <link rel="stylesheet" href="/resources/public/css/alerts.css" />
+
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto"
+    />
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+    ></script>
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">
+      {{ message }}
+      <span class="closebtn" onclick="this.parentElement.style.display='none';"
+        >&times;</span
+      >
+    </div>
+    {% endfor %} {% endif %} {% endwith %}
+    <main>
+      <p>Domain Name - {{ domain_name }}</p>
+      <p>Add the following TXT record to your DNS configuration</p>
+        <p>Name - txt-certsecure-domain-verification.{{ domain_name }}</p>
+        <p>Value - {{ txt_record }}</p>
+        <p>Once you have added the TXT record, click the button below to verify your domain</p>
+        <form action="/organization/verify-domain" method="post">
+            <div
+            class="cf-turnstile"
+            data-sitekey="0x4AAAAAAAKrUJ3Czhau9p1D"
+            data-action="organization-verify-domain"
+            data-widget_type="compact"
+          ></div>
+          <input type="submit" value="Verify Domain" />
+    </main>
+  </body>
+</html>

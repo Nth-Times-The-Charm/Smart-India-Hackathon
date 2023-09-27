@@ -1,0 +1,47 @@
+.alert {
+    width: 80%;
+    padding: 10px;
+    color: white;
+    margin-bottom: 10px;
+    transition: 0.3s;
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    top: 0;
+    border-radius: 0px 0px 5px 5px;
+
+}
+
+.closebtn {
+    margin-left: 15px;
+    color: white;
+    font-weight: bold;
+    float: right;
+    font-size: 22px;
+    line-height: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.closebtn:hover {
+    color: rgba(255, 255, 255, 0.5)
+}
+
+.alert-success {
+    background-color: #4CAF50;
+}
+
+.alert-info {
+    background-color: #2196F3;
+}
+
+.alert-warning {
+    background-color: #ff9800;
+}
+
+.alert-danger {
+    background-color: #f44336;
+}
