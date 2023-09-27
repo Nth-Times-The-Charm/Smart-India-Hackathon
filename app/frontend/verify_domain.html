@@ -33,7 +33,7 @@
       <p>Domain Name - {{ domain_name }}</p>
       <p>Add the following TXT record to your DNS configuration</p>
         <p>Name - txt-certsecure-domain-verification.{{ domain_name }}</p>
-        <p>Value - {{ txt_record }}</p>
+        <p>Value - {{ verification_text_record }}</p>
         <p>Once you have added the TXT record, click the button below to verify your domain</p>
         <form action="/organization/verify-domain" method="post">
             <div
@@ -43,6 +43,8 @@
             data-widget_type="compact"
           ></div>
           <input type="submit" value="Verify Domain" />
+        </form>
+        <p>Please note that it may take up to 24 hours for the DNS changes to take effect depending on your DNS provider</p>
     </main>
   </body>
 </html>

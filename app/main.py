@@ -178,7 +178,7 @@ def verify_recaptcha(response):
     '''
     try:
         api_response = requests.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", data={
-                                     "secret": "0x4AAAAAAAKrUKS-bseXfvK9BPnnudKIMoY", "response": response}).json()
+                                     "secret": os.environ.get("RECAPTCHA_SECRET_KEY"), "token": response}).json()
         if api_response.get("success"):
             return True
         else:
@@ -315,6 +315,7 @@ def organization_signup():
             organization_id = secrets.token_hex(8)
 
         DB["organizations"].insert_one({
+            "organization_id": organization_id,
             "organization_name": organization_name,
             "organization_domain": organization_domain,
             "organization_contact_email": organization_contact_email,
@@ -354,14 +355,17 @@ def verify_domain():
                 return redirect(url_for("dashboard"))
             verification_text_record = DB["organizations"].find_one(
                 {"organization_id": session.get("organization_id")})["verification_code"]
-            if dns.resolver.resolve("txt-certsecure-domain-verification."+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text() == verification_text_record:
+            
+            domain_txt_record = dns.resolver.resolve("txt-certsecure-domain-verification."+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text().lower().replace('"', '').replace(" ", "")
+            
+            if domain_txt_record == verification_text_record:
                 DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
                     "$set": {"organization_verified": True}})
                 flash("Domain verified successfully", "success")
                 return "Domain verified successfully"
             else:
                 flash("Txt record not found", "danger")
-                return render_template("verify_domain.html", verification_text_record=verification_text_record)
+                return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"])
         return redirect(url_for("organization_signup"))
 
 
