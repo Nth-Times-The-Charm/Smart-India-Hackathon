@@ -294,6 +294,7 @@ def organization_signup():
             "organization_contact_email").lower()).replace(" ", "")
         organization_password = str(request.form.get(
             "organization_password").lower()).replace(" ", "")
+        agree_to_terms = request.form.get("agree_to_terms")
 
         if not "." in organization_domain:
             flash("Invalid domain, please try again", "danger")
@@ -301,6 +302,10 @@ def organization_signup():
 
         if not "@" in organization_contact_email or not "." in organization_contact_email:
             flash("Invalid email address, please try again", "danger")
+            return render_template("organization_signup.html")
+        
+        if agree_to_terms != "on":
+            flash("Please agree to the terms and conditions", "danger")
             return render_template("organization_signup.html")
 
         if DB["organizations"].find_one({"organization_domain": organization_domain}):
@@ -355,32 +360,22 @@ def verify_domain():
                 return redirect(url_for("dashboard"))
             verification_text_record = DB["organizations"].find_one(
                 {"organization_id": session.get("organization_id")})["verification_code"]
+            try:
             
-            domain_txt_record = dns.resolver.resolve("txt-certsecure-domain-verification."+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text().lower().replace('"', '').replace(" ", "")
-            
-            if domain_txt_record == verification_text_record:
-                DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
-                    "$set": {"organization_verified": True}})
-                flash("Domain verified successfully", "success")
-                return "Domain verified successfully"
-            else:
-                flash("Txt record not found", "danger")
+                    domain_txt_record = dns.resolver.resolve("TXT-CERTSECURE-DOMAIN-VERIFICATION."+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text().lower().replace('"', '').replace(" ", "")
+                    
+                    if domain_txt_record == verification_text_record:
+                        DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
+                            "$set": {"organization_verified": True}})
+                        flash("Domain verified successfully", "success")
+                        return "Domain verified successfully"
+                    else:
+                        flash("TXT record does not match", "danger")
+                        return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], domain_txt_record=domain_txt_record)
+            except Exception as danger:
+                flash("No TXT record found", "danger")
                 return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"])
         return redirect(url_for("organization_signup"))
-
-
-@app.route("/test")
-def test():
-    domain = request.args.get("domain")
-    verification_code = request.args.get("verification_code")
-    if domain:
-        try:
-            return dns.resolver.resolve("txt-certsecure-domain-verification."+domain, "TXT")[0].to_text()
-        except:
-            return "Record not found"
-    else:
-        return "No TXT record found"
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7777, debug=True)
