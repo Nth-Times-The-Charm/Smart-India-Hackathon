@@ -1,4 +1,102 @@
 # Smart-India-Hackathon
+
+# CertSecure - Secure Certification Management System
+
+CertSecure is a web application built using Flask, MongoDB, Redis, SendinBlue, and other technologies. It serves as a secure certification management system that allows organizations to manage their certifications and domains securely. This README will guide you through setting up and running the application.
+
+## Features
+
+- User registration and login.
+- Organization signup and domain verification.
+- Secure password hashing.
+- Integration with reCAPTCHA for form validation.
+- Email verification and notifications using SendinBlue.
+- Session management using Redis.
+- Dashboard for authenticated users.
+- TXT record-based domain verification.
+
+## Prerequisites
+
+Before running the application, ensure you have the following prerequisites installed:
+
+- Python (3.x recommended)
+- Flask
+- pymongo (Python MongoDB driver)
+- redis-py (Python Redis client)
+- sib-api-v3-sdk (SendinBlue Python client)
+- colorama (for colored console output)
+- Flask-Session (for managing sessions)
+- requests (for making HTTP requests)
+- bcrypt (for secure password hashing)
+
+You can install these dependencies using pip:
+
+```bash
+pip install Flask pymongo redis sib-api-v3-sdk colorama Flask-Session requests bcrypt
+```
+
+Additionally, you need to set up the following environment variables in a `.env` file:
+
+- `MONGODB_USERNAME`: Your MongoDB Atlas username.
+- `MONGODB_PASSWORD`: Your MongoDB Atlas password.
+- `REDIS_USERNAME`: Your Redis username.
+- `REDIS_PASSWORD`: Your Redis password.
+- `SECRET_KEY`: A secure random string for Flask session management.
+- `SENDINBLUE_API_KEY`: Your SendinBlue API key.
+- `ADMIN_USERNAME`: The admin username for logging in.
+- `ADMIN_PASSWORD`: The admin password for logging in.
+- `RECAPTCHA_SECRET_KEY`: Your reCAPTCHA secret key.
+
+## Database Configuration
+
+CertSecure uses MongoDB to store organization data. Make sure you have a MongoDB Atlas cluster set up and provide the cluster connection URI in the `connect_mongodb` function.
+
+## Running the Application
+
+To run the application, use the following command:
+
+```bash
+python app.py
+```
+
+The application will start, and you can access it in your web browser at `http://localhost:7777`.
+
+## Usage
+
+### Admin Login
+
+1. Access the login page by going to `http://localhost:7777/login`.
+2. Enter the admin username and password provided in your environment variables.
+3. Click the "Login" button.
+4. Upon successful login, you will be redirected to the dashboard.
+
+### Organization Signup
+
+1. Access the organization signup page by going to `http://localhost:7777/organization/signup`.
+2. Fill in the organization details, including name, domain, contact email, and password.
+3. Complete the reCAPTCHA challenge to prove you are not a robot.
+4. Agree to the terms and conditions.
+5. Click the "Signup" button.
+6. You will be redirected to the domain verification page.
+
+### Domain Verification
+
+1. Access the domain verification page by going to `http://localhost:7777/organization/verify-domain`.
+2. Verify your domain by setting the TXT record in your DNS configuration. The application will check if the TXT record matches the one generated during signup.
+3. If the verification is successful, you will receive a success message.
+
+### Dashboard
+
+- Authenticated users, including the admin and verified organizations, will see a dashboard.
+
+## Customization
+
+You can customize this application further by adding more features, improving the UI, or integrating additional functionality as needed. The provided code serves as a foundation for building a secure certification management system.
+
+Feel free to modify and extend this code to suit your specific requirements.
+
+Enjoy using CertSecure, your Secure Certification Management System!
+
 # Domain Verification HTML Page Readme
 
 This HTML code represents a web page for domain verification using a TXT record. It provides instructions to users on how to verify their domain ownership by adding a specific TXT record to their DNS settings.
