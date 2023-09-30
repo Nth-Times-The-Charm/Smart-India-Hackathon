@@ -143,21 +143,21 @@ def send_email(email, name, type, verification_code=None):
     api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
         sib_api_v3_sdk.ApiClient(configuration))
 
-    match type:
-        case "organization_verification":
-            subject = "Organization Verification - CertSecure"
-            sender = {"name": "CertSecure",
-                      "email": "noreply@projectrexa.dedyn.io"}
-            to = [{"email": email, "name": name}]
-            reply_to = {"email": "certsecure@projectrexa.dedyn.io",
-                        "name": "CertSecure"}
-            html = render_template(
-                'email/sign-up.html', name=name, link="https://certsecure.project.projectrexa.dedyn.io/organization/verify-domain?verification-code="+verification_code, year=time.strftime("%Y"))
-            send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-                to=to, html_content=html, reply_to=reply_to, sender=sender, subject=subject)
+    # Case statement switched to if-else statements due to no support for 3.10 on Vercel
+    if type == "organization-verification":
+        subject = "Organization Verification - CertSecure"
+        sender = {"name": "CertSecure",
+                  "email": "noreply@projectrexa.dedyn.io"}
+        to = [{"email": email, "name": name}]
+        reply_to = {"email": "certsecure@projectrexa.dedyn.io",
+                    "name": "CertSecure"}
+        html = render_template(
+            'email/sign-up.html', name=name, link="https://certsecure.project.projectrexa.dedyn.io/organization/verify-domain?verification-code="+verification_code, year=time.strftime("%Y"))
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            to=to, html_content=html, reply_to=reply_to, sender=sender, subject=subject)
 
-        case _:
-            return False
+    else:
+        return False
     try:
         api_instance.send_transac_email(send_smtp_email)
         return True
@@ -187,11 +187,14 @@ def verify_recaptcha(response):
         return False
 # Flask Routes
 
+
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
+
 def check_password(password, hashed_password):
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -272,6 +275,11 @@ def organization_signup():
     if session.get("logged_in") and session.get("user_type") == "organization":
         return redirect(url_for("dashboard"))
 
+    if session.get("organization_id"):
+        return redirect(url_for("verify_domain"))
+
+    print(session.get("organization_id"))
+
     if request.method == "POST":
         turnstile_response = request.form.get("cf-turnstile-response")
 
@@ -303,7 +311,7 @@ def organization_signup():
         if not "@" in organization_contact_email or not "." in organization_contact_email:
             flash("Invalid email address, please try again", "danger")
             return render_template("organization_signup.html")
-        
+
         if agree_to_terms != "on":
             flash("Please agree to the terms and conditions", "danger")
             return render_template("organization_signup.html")
@@ -361,21 +369,23 @@ def verify_domain():
             verification_text_record = DB["organizations"].find_one(
                 {"organization_id": session.get("organization_id")})["verification_code"]
             try:
-            
-                    domain_txt_record = dns.resolver.resolve("TXT-CERTSECURE-DOMAIN-VERIFICATION."+DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text().lower().replace('"', '').replace(" ", "")
-                    
-                    if domain_txt_record == verification_text_record:
-                        DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
-                            "$set": {"organization_verified": True}})
-                        flash("Domain verified successfully", "success")
-                        return "Domain verified successfully"
-                    else:
-                        flash("TXT record does not match", "danger")
-                        return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], domain_txt_record=domain_txt_record)
+
+                domain_txt_record = dns.resolver.resolve("TXT-CERTSECURE-DOMAIN-VERIFICATION."+DB["organizations"].find_one(
+                    {"organization_id": session.get("organization_id")})["organization_domain"], "TXT")[0].to_text().lower().replace('"', '').replace(" ", "")
+
+                if domain_txt_record == verification_text_record:
+                    DB["organizations"].update_one({"organization_id": session.get("organization_id")}, {
+                        "$set": {"organization_verified": True}})
+                    flash("Domain verified successfully", "success")
+                    return "Domain verified successfully"
+                else:
+                    flash("TXT record does not match", "danger")
+                    return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], domain_txt_record=domain_txt_record)
             except Exception as danger:
                 flash("No TXT record found", "danger")
                 return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"])
         return redirect(url_for("organization_signup"))
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7777, debug=False)
+    app.run(host="0.0.0.0")
