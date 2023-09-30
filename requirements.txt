@@ -6,3 +6,4 @@ redis
 python-dotenv
 sib-api-v3-sdk
 dnspython
+bcrypt
