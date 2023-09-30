@@ -1,8 +1,11 @@
+"""
+This file contains the main code for the CertSecure backend service
+"""
 import hashlib
 import secrets
 import os
 import time
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_session import Session
 from colorama import Fore
 import pymongo
@@ -17,10 +20,6 @@ import bcrypt
 
 # Global Variables
 dotenv.load_dotenv()
-MONGO_CLIENT = None
-DB = None
-REDIS_CLIENT = None
-
 
 # Flask App
 
@@ -40,15 +39,15 @@ def connect_mongodb(number_of_tries=0):
 
     Returns: None
     '''
-    global MONGO_CLIENT, DB
 
-    MONGO_CLIENT = pymongo.MongoClient(
+    mongo_client = pymongo.MongoClient(
         f"mongodb+srv://{os.environ.get('MONGODB_USERNAME')}:{os.environ.get('MONGODB_PASSWORD')}@shi-cluster.rqdq2aa.mongodb.net/?retryWrites=true&w=majority")
-    DB = MONGO_CLIENT["certsecure"]
+    mongo_db = mongo_client["certsecure"]
 
     try:
-        MONGO_CLIENT.server_info()
+        mongo_client.server_info()
         print(Fore.GREEN + "Connected to MongoDB Atlas")
+        return mongo_db
 
     except Exception as danger:
         if number_of_tries < 3:
@@ -62,19 +61,20 @@ def connect_redis(number_of_tries=0):
     '''
     Connects to Redis
 
-    Keyword Arguments: number_of_tries {Integer} -- The number of times the function has been called (default: {0})
+    Keyword Arguments: number_of_tries {Integer} -- The number of times 
+    the function has been called (default: {0})
 
     Raises: Exception -- If the function fails to connect to Redis
 
     Returns: None
     '''
-    global REDIS_CLIENT
-    REDIS_CLIENT = redis.from_url(
+    redis_client = redis.from_url(
         f"rediss://{os.environ.get('REDIS_USERNAME')}:{os.environ.get('REDIS_PASSWORD')}@shi-redis-projectrexa.aivencloud.com:25156")
 
     try:
-        REDIS_CLIENT.ping()
+        redis_client.ping()
         print(Fore.GREEN + "Connected to Redis")
+        return redis_client
 
     except Exception as danger:
         if number_of_tries < 3:
@@ -83,8 +83,8 @@ def connect_redis(number_of_tries=0):
         raise Exception(Fore.RED + "Failed to connect to Redis") from danger
 
 
-connect_mongodb()
-connect_redis()
+DB = connect_mongodb()
+REDIS_CLIENT = connect_redis()
 
 # Flask Config
 
@@ -124,15 +124,15 @@ def file_hash(file):
             hashlib.sha256().update(chunk)
         return hashlib.sha256().hexdigest()
     except Exception as danger:
-        raise Exception(Fore.RED + f"Failed to hash file: {danger}")
+        raise Exception(Fore.RED + "Failed to hash the file") from danger
 
 
-def send_email(email, name, type, verification_code=None):
+def send_email(email, name, mail_type, verification_code=None):
     '''
     Sends an email to the user
 
     Arguments: email {String} -- The email of the user
-               type {String} -- The type of email to be sent
+               mail_type {String} -- The type of email to be sent
 
     Keyword Arguments: verification_code {String} -- The verification code to be sent (default: {None})
 
@@ -144,7 +144,7 @@ def send_email(email, name, type, verification_code=None):
         sib_api_v3_sdk.ApiClient(configuration))
 
     # Case statement switched to if-else statements due to no support for 3.10 on Vercel
-    if type == "organization-verification":
+    if mail_type == "organization-verification":
         subject = "Organization Verification - CertSecure"
         sender = {"name": "CertSecure",
                   "email": "noreply@projectrexa.dedyn.io"}
@@ -161,8 +161,7 @@ def send_email(email, name, type, verification_code=None):
     try:
         api_instance.send_transac_email(send_smtp_email)
         return True
-    except ApiException as e:
-
+    except ApiException:
         return False
 
 
@@ -178,21 +177,23 @@ def verify_recaptcha(response):
     '''
     try:
         api_response = requests.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", data={
-                                     "secret": os.environ.get("RECAPTCHA_SECRET_KEY"), "token": response}).json()
-        if api_response.get("success"):
-            return True
-        else:
-            return False
-    except ApiException as e:
+                                     "secret": os.environ.get("RECAPTCHA_SECRET_KEY"), "token": response}, timeout=5).json()
+        return api_response.get("success")
+    except:
         return False
-# Flask Routes
 
 
 def hash_password(password):
+    '''
+    Hashes the password using bcrypt
+    '''
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
 
 def check_password(password, hashed_password):
+    '''
+    Checks if the password matches the hashed password
+    '''
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 
@@ -304,11 +305,11 @@ def organization_signup():
             "organization_password").lower()).replace(" ", "")
         agree_to_terms = request.form.get("agree_to_terms")
 
-        if not "." in organization_domain:
+        if "." not in organization_domain:
             flash("Invalid domain, please try again", "danger")
             return render_template("organization_signup.html")
 
-        if not "@" in organization_contact_email or not "." in organization_contact_email:
+        if "@" not in organization_contact_email or "." not in organization_contact_email:
             flash("Invalid email address, please try again", "danger")
             return render_template("organization_signup.html")
 
@@ -324,7 +325,7 @@ def organization_signup():
             secrets.token_hex(32)
         organization_id = secrets.token_hex(8)
 
-        while DB["organizations"].find_one({"organization_id": organization_id}) != None:
+        while DB["organizations"].find_one({"organization_id": organization_id}) is not None:
             organization_id = secrets.token_hex(8)
 
         DB["organizations"].insert_one({
@@ -345,6 +346,12 @@ def organization_signup():
 
 @app.route("/organization/verify-domain", methods=["GET", "POST"])
 def verify_domain():
+    '''
+    Renders the verify domain page if the user is not logged in or redirects to the dashboard page
+
+    Returns: HTML -- The verify domain page or the dashboard page
+
+    '''
     if request.method == "GET":
         if not session.get("logged_in") and session.get("organization_id"):
             if not DB["organizations"].find_one({"organization_id": session.get("organization_id")}):
@@ -378,10 +385,9 @@ def verify_domain():
                         "$set": {"organization_verified": True}})
                     flash("Domain verified successfully", "success")
                     return "Domain verified successfully"
-                else:
-                    flash("TXT record does not match", "danger")
-                    return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], domain_txt_record=domain_txt_record)
-            except Exception as danger:
+                flash("TXT record does not match", "danger")
+                return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"], domain_txt_record=domain_txt_record)
+            except:
                 flash("No TXT record found", "danger")
                 return render_template("verify_domain.html", verification_text_record=verification_text_record, domain_name=DB["organizations"].find_one({"organization_id": session.get("organization_id")})["organization_domain"])
         return redirect(url_for("organization_signup"))
