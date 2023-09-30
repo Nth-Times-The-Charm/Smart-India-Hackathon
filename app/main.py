@@ -298,7 +298,7 @@ def organization_signup():
 
         organization_name = str(request.form.get("organization_name").title())
         organization_domain = str(request.form.get(
-            "organization_domain").lower()).replace(" ", "")
+            "organization_domain").lower()).replace(" ", "").replace("https://", "").replace("http://", "").replace("/", "").replace("www.", "")
         organization_contact_email = str(request.form.get(
             "organization_contact_email").lower()).replace(" ", "")
         organization_password = str(request.form.get(
