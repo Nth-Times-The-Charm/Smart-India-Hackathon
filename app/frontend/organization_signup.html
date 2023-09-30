@@ -21,15 +21,14 @@
       async
       defer
     ></script>
+    <script src="/resources/public/js/alerts.js" defer></script>
   </head>
   <body>
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, message in messages %}
     <div class="alert alert-{{ category }}">
       {{ message }}
-      <span class="closebtn" onclick="this.parentElement.style.display='none';"
-        >&times;</span
-      >
+      <span class="closebtn" onclick="transitionHide()">&times;</span>
     </div>
     {% endfor %} {% endif %} {% endwith %}
 

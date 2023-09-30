@@ -271,6 +271,11 @@ def organization_signup():
     '''
     if session.get("logged_in") and session.get("user_type") == "organization":
         return redirect(url_for("dashboard"))
+    
+    if session.get("organization_id"):
+        return redirect(url_for("verify_domain"))
+    
+    print(session.get("organization_id"))
 
     if request.method == "POST":
         turnstile_response = request.form.get("cf-turnstile-response")
@@ -378,4 +383,4 @@ def verify_domain():
         return redirect(url_for("organization_signup"))
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7777, debug=False)
+    app.run(host="0.0.0.0")
