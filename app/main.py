@@ -267,6 +267,53 @@ def logout():
 
 @app.route("/organization/signup", methods=["GET", "POST"])
 def organization_signup():
+
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///your_database.db'
+
+db = SQLAlchemy(app)
+
+class Organization(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    orgName = db.Column(db.String(100), unique=True)
+    email = db.Column(db.String(120), unique=True)
+    password = db.Column(db.String(80))
+
+class SignupForm(FlaskForm):
+    orgName = StringField('Organization Name', validators=[InputRequired(), Length(min=4, max=100)])
+    email = StringField('Email', validators=[InputRequired(), Email(), Length(max=120)])
+    password = PasswordField('Password', validators=[InputRequired(), Length(min=8, max=80)])
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    form = SignupForm()
+
+    if form.validate_on_submit():
+        orgName = form.orgName.data
+        email = form.email.data
+        password = form.password.data
+
+       
+        existing_org = Organization.query.filter_by(email=email).first()
+        if existing_org:
+            flash('Email address already registered.', 'danger')
+            return redirect(url_for('signup'))
+
+ 
+        new_org = Organization(orgName=orgName, email=email, password=password)
+        db.session.add(new_org)
+        db.session.commit()
+        flash('Organization signed up successfully!', 'success')
+        return redirect(url_for('signup'))
+
+    return render_template('signup.html', form=form)
+
+if __name__ == '__main__':
+    db.create_all()
+    app.run(debug=True)
+
     '''
     Renders the signup page if the user is not logged in or redirects to the dashboard page
 
