@@ -341,7 +341,30 @@ def organization_signup():
         return redirect(url_for("verify_domain"))
 
     return render_template("organization_signup.html")
+            
+# Tarun, Bharat, Laxman code from here👇            
+@app.route('/organization/login', methods=['GET', 'POST'])
+def organization_login():
+    if organization_logged_in:
+        return redirect(url_for('dashboard'))
 
+    if request.method == 'POST':
+        organization_domain = request.form.get('organization_domain')
+        organization_password = request.form.get('organization_password')
+
+        if check_organization_credentials(organization_domain, organization_password):
+            session['organization_domain'] = organization_domain
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid credentials, please try again', 'danger')
+
+    return render_template('organization_login.html')
+
+def check_organization_credentials(domain, password):
+# bhar lio mujhe ni aata 😁
+# Return True if valid, False otherwise ok bro 👍 GN
+
+    
 
 @app.route("/organization/verify-domain", methods=["GET", "POST"])
 def verify_domain():
