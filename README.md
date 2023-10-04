@@ -1,5 +1,16 @@
 # CertSecure - Secure Certification Management System
 
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
 ## Project Aim and Goal
 
 CertSecure is a comprehensive web application designed to provide organizations with a secure certification management system. The primary goals of this project are:
