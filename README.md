@@ -1,6 +1,6 @@
 # CertSecure - Secure Certification Management System
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## Contributors
@@ -12,6 +12,7 @@
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/TarunRaghav3699"><img src="https://avatars.githubusercontent.com/u/124661867?v=4?s=100" width="100px;" alt="Tarun_Raghav3699"/><br /><sub><b>Tarun_Raghav3699</b></sub></a><br /><a href="https://github.com/Nth-Times-The-Charm/Smart-India-Hackathon/commits?author=TarunRaghav3699" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Bharat-Yadav-11"><img src="https://avatars.githubusercontent.com/u/142567000?v=4?s=100" width="100px;" alt="Bharat-Yadav-11"/><br /><sub><b>Bharat-Yadav-11</b></sub></a><br /><a href="https://github.com/Nth-Times-The-Charm/Smart-India-Hackathon/commits?author=Bharat-Yadav-11" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
