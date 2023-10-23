@@ -1,0 +1,116 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Organization Signup</title>
+    <link rel="icon" href="/resources/public/images/favicon.svg" />
+    <link rel="stylesheet" href="/resources/public/css/basic.css" />
+    <link rel="stylesheet" href="/resources/public/css/alerts.css" />
+    <link
+      rel="stylesheet"
+      href="/resources/public/css/organization_auth.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto"
+    />
+
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+    ></script>
+    <script src="/resources/public/js/alerts.js" defer></script>
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">
+      {{ message | safe }}
+      <span class="closebtn" onclick="transitionHide()">&times;</span>
+    </div>
+    {% endfor %} {% endif %} {% endwith %}
+
+    <main>
+      <form action="/organization/signup" method="post">
+        <div class="logo">
+          <img
+            src="/resources/public/images/logo-no-background.svg"
+            alt="CertSecure Logo"
+          />
+        </div>
+        <h1>Organization Signup</h1>
+        <label for="organization_name">Organization Name</label>
+        <input
+          style="text-transform: uppercase; font-weight: 700"
+          type="text"
+          name="organization_name"
+          id="organization_name"
+          required
+        />
+        <br />
+
+        <label for="organization_domain">Organization Domain</label>
+        <p class="info">
+          The organization domain will be verified in the next step
+        </p>
+        <input
+          style="text-transform: uppercase; font-weight: 700"
+          type="text"
+          name="organization_domain"
+          id="organization_domain"
+          required
+        />
+        <br />
+
+        <label for="organization_contact_email"
+          >Organization Contact Email</label
+        >
+        <p class="info">
+          The organization contact email will publicly displayed on your
+          organization's profile page
+        </p>
+        <input
+          style="text-transform: uppercase; font-weight: 700"
+          type="email"
+          name="organization_contact_email"
+          id="organization_contact_email"
+          required
+        />
+        <br />
+
+        <label for="organization_password">Organization Password</label>
+        <input
+          style="font-weight: 700"
+          type="text"
+          name="organization_password"
+          id="organization_password"
+          required
+        />
+        <br />
+        <div class="tos_and_privacy_policy">
+          <label for="agree_to_terms" style="display: inline"
+            >I hereby agree to the
+            <a href="/terms-of-service">Terms of Service</a> and the
+            <a href="/privacy-policy">Privacy Policy</a> of CertSecure</label
+          >
+          <input
+            style="display: inline"
+            type="checkbox"
+            name="agree_to_terms"
+            id="agree_to_terms"
+            required
+          />
+        </div>
+        <div
+          class="cf-turnstile"
+          data-sitekey="0x4AAAAAAAKrUJ3Czhau9p1D"
+          data-action="organization-signup"
+          data-widget_type="compact"
+        ></div>
+        <input type="submit" value="Sign Up" />
+      </form>
+    </main>
+  </body>
+</html>
