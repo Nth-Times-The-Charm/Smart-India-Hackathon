@@ -1,10 +1,9 @@
 flask
-Flask-Session
-colorama
+pyOpenSSL
+flask_apscheduler
+flask_session
 pymongo
-redis
-python-dotenv
-sib-api-v3-sdk
 dnspython
-bcrypt
-requests
+web3
+py-solc-x
+
