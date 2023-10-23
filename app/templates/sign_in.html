@@ -1,0 +1,28 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | CertSecure</title>
+    <link rel="stylesheet" href="/static/css/sign_up.css">
+</head>
+<body>
+    <div class="error">
+    <p id="error-text" class="danger"> {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %} {{ message }}</li> {% endfor %} 
+    </ul> {% endif %} {% endwith %} &nbsp; </p>
+</div>
+<main>
+    <img src="/static/logo.png" alt="CertSecure Logo" width="100px">
+    <h1>Sign In | CertSecure</h1>
+    <form action="/sign-in" method="post">
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" required autofocus placeholder="Enter your work email" value="test@example.com">
+        <br>
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required placeholder="Enter your password" value="admin">
+        <br>
+        <input type="submit" value="Sign In">
+    </form>
+</main>    
+</body>
+</html>
